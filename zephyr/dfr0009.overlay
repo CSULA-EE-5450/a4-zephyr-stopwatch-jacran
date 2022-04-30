@@ -1,0 +1,43 @@
+/ {
+    dfr0009 {
+        compatible = "lcd1602", "hd44780", "gpio-leds";
+        status = "okay";
+        label = "hd44780";
+ 
+        /* TODO: put ADC button gpios here too */
+
+        hd44780_pin_d4: pin_d4 {
+            gpios = <&arduino_header 10 GPIO_ACTIVE_HIGH>;
+        };
+
+        hd44780_pin_d5: pin_d5 {
+            gpios = <&arduino_header 11 GPIO_ACTIVE_HIGH>;
+        };
+
+        hd44780_pin_d6: pin_d6 {
+            gpios = <&arduino_header 12 GPIO_ACTIVE_HIGH>;
+        };
+
+        hd44780_pin_d7: pin_d7 {
+            gpios = <&arduino_header 13 GPIO_ACTIVE_HIGH>;
+        };
+        
+        hd44780_pin_rs: pin_rs {
+            gpios = <&arduino_header 14 GPIO_ACTIVE_HIGH>;
+        };
+
+        hd44780_pin_en: pin_en {
+            gpios = <&arduino_header 15 GPIO_ACTIVE_HIGH>;
+        };
+        
+    };
+
+    aliases {
+        dfr0009d4 = &hd44780_pin_d4;
+        dfr0009d5 = &hd44780_pin_d5;
+        dfr0009d6 = &hd44780_pin_d6;
+        dfr0009d7 = &hd44780_pin_d7;
+        dfr0009rs = &hd44780_pin_rs;
+        dfr0009en = &hd44780_pin_en;
+    };
+};
