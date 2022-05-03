@@ -1,5 +1,19 @@
 # Assignment 4: Creating a stopwatch using Zephyr RTOS
 
+
+## A quick intro to the solution
+
+![sequence diagram](a4_zephyr_stopwatch.drawio.png)
+
+An ISR was attached to sw0. The callback is called on both edges of the button press. When the button is pressed down, the callback gets the current uptime (timestamp for buttonpress) and puts is into the two message queues. The state (`pressed = true`) is also put into another queue. When sw0 is released again the state (`pressed = false`) is again put into the queue such that each tread can make a decision on what to next given its instructions.
+
+There are two main threads in this program:
+
+- **StopWatchLCD-thread**: Keeps track of the time and makes sure the correct information is displayed at the correct time.
+- **Peripheral-thread**: Keeps track of which state we're in and turns the leds on/off given the instructions.
+
+
+## The problem to be solved
 In this assignment, you will use the LCD module and the user button
   to create a stopwatch using Zephyr.  You can choose however
   you want to implement this stopwatch, be it FSM or just
