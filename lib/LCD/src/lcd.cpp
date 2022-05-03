@@ -190,6 +190,7 @@ void lcd_run(void* p_msgq_time, void* p_msgq_pressed_state, void* unused){
                         current_state = SW_RUN;
                         lcd.offset_timestamp = k_uptime_get_32();
                         lcd.total_pause_time = lcd.last_lap_timestamp = lcd.total_pause_time_since_last_lap = 0;
+                        lcd.remove_lap_time();
                         lcd.first_lap = true;
                     }
                 }
