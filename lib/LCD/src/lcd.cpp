@@ -243,7 +243,6 @@ void lcd_run(void* p_msgq_time, void* p_msgq_pressed_state, void* unused){
         {
             lcd.writeln(reset_str,sizeof(reset_str)-1, 0);
             lcd.writeln(reset_instr,sizeof(reset_instr)-1, 1); 
-            lcd.remove_lap_time();
             lcd.pause_interval = 0;
         }
         
