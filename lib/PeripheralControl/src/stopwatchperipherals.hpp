@@ -38,15 +38,17 @@ class StopWatchPeripherals{
         void turn_on_led1(void) {gpio_pin_set_dt(&spec_pin_led1, 1);}
         void turn_off_led1(void) {gpio_pin_set_dt(&spec_pin_led1, 0);}
         void init(gpio_callback_handler_t callback);
+        void run_state(void);
         struct gpio_callback sw0_callback;
         const struct gpio_dt_spec spec_pin_led0 = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
         const struct gpio_dt_spec spec_pin_led1 = GPIO_DT_SPEC_GET(DT_ALIAS(led1), gpios);
         const struct gpio_dt_spec spec_pin_sw0 = GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios);
+        uint8_t state;
 
 };
 
 /*the function called by the thread. This could not be inside a class for some reason*/
-void run_leds(void* p_peripherals, void* p_msgq_time, void* p_msgq_pressed_state);
+void run_leds(void* p_peripherals, void* p_msgq_pressed_state, void* unused);
 
 
 #ifdef __cplusplus

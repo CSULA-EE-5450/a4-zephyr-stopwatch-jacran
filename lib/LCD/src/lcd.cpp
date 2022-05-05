@@ -18,6 +18,7 @@
 StopWatchLCD::StopWatchLCD(){
     hd44780_init();
     hd44780_cmd(HD44780_CMD_CLEAR, 0);
+    this->state = SW_IDLE;
 }
 
 
@@ -122,12 +123,56 @@ void StopWatchLCD::set_lap_time(uint32_t timestamp){
     this->writeln(this->lcd_column1_str, 12, 1);
 }
 
+
+
+/**
+ * @brief run the current state of the object
+ * 
+ */
+void StopWatchLCD::run_state(void){
+    switch (this->state)
+    {
+    case SW_IDLE:
+        this->writeln(idle_str, sizeof(idle_str)-1, 0);
+        break;
+    case SW_RUN:
+        this->curr_time = k_uptime_get_32();
+        this->print_running_time();
+        break;
+    case SW_RUN_W_LAP:
+        this->set_lap_time(this->curr_time);
+        this->curr_time = k_uptime_get_32();
+        this->print_running_time();
+        this->state = SW_RUN;
+        break;
+    case SW_PAUSE:
+        this->display_paused_time();
+        break;
+    case SW_RESET:
+        this->writeln(reset_str,sizeof(reset_str)-1, 0);
+        this->writeln(reset_instr,sizeof(reset_instr)-1, 1); 
+        this->pause_interval = 0;
+        break;
+    default:
+        this->state = SW_RESET;
+        break;
+    }
+}
+
+
+
+
+
 /**
  * @brief the main function which ensured the LCD displays the correct information given the buttonpresses
  * 
  * @param p_msgq_time time msgq containing timestamp for buttonpress
  * @param p_msgq_pressed_state sw0 pressed state msgq 
  * @param unused - not used
+ * 
+ * utilizes two timers. 
+ *  - One for updating the lcd with a period of 50ms
+ *  - One for keeping track of how long sw0 was pushed down
  * 
  * 
  * On initialization (bootup), the LCD should display "Stopwatch Ready"
@@ -150,72 +195,60 @@ void StopWatchLCD::set_lap_time(uint32_t timestamp){
  * While the stopwatch is active, if the button is pressed and held down for at least 4 seconds, 
  * enter the "reset" stopwatch mode.
  */
-void lcd_run(void* p_msgq_time, void* p_msgq_pressed_state, void* unused){
+void lcd_run(void* p_msgq_pressed_state, void* unused, void* un_used){
 
-    
     StopWatchLCD lcd = StopWatchLCD();
 
-    k_msgq* pressed_time_msgq = (k_msgq*)p_msgq_time;
     k_msgq* pressed_state_msgq = (k_msgq*)p_msgq_pressed_state;
 
-    char idle_str[] = "Stopwatch ready";
-    char reset_str[] = "00:00:00";
-    char reset_instr[] = "Press to restart";
+    bool pressed_state;
 
-    uint32_t pressed_time, uptime;
-    
+    const uint8_t LCD_UPDATE_PERIOD = 50; //ms
+    const uint16_t BUTTON_PRESSED_INTERVAL = 2000; //ms (2 sec)
 
-    uint8_t current_state = SW_IDLE;
-    bool first_pause = true;
-    bool two_sec = false;
-    bool four_sec = false;
-    bool pressed_state = false;
+    struct k_timer lcd_update_timer;
+    struct k_timer button_pressed_timer;
+
+    k_timer_init(&lcd_update_timer,NULL, NULL);
+    k_timer_init(&button_pressed_timer,NULL, NULL);
+
+    k_timer_start(&lcd_update_timer, K_MSEC(LCD_UPDATE_PERIOD), K_FOREVER); 
+
 
     while(true){
-        if(k_msgq_get(pressed_state_msgq, &pressed_state, K_NO_WAIT) == 0){ //Successful read
+        if(k_msgq_get(pressed_state_msgq, &pressed_state, K_NO_WAIT) == 0){ //Successful read- start button-timer
             if(pressed_state){
-                two_sec = four_sec = false; //reset
-                k_msgq_get(pressed_time_msgq, &pressed_time, K_NO_WAIT); //get pressed time
-            }else{ //Meaning button was just released
-                if(four_sec == false && four_sec == false){ //Button was released within 2 seconds
-                    if(current_state == SW_IDLE){
-                        current_state = SW_RUN;
+                k_timer_start(&button_pressed_timer, K_MSEC(BUTTON_PRESSED_INTERVAL), K_MSEC(BUTTON_PRESSED_INTERVAL));
+            }
+            //Meaning button was just released - check how many times button_timer has exceeded its time 
+            //      0:  less than 2 sec
+            //      1:  Button pushed between 2 and 4 seconds
+            //      >=2: Button pushed for at least 4 seconds
+            else{
+                uint32_t timer_status = k_timer_status_get(&button_pressed_timer);
+                if(timer_status == 0){ //Button pressed for less than 2 sec
+                    if(lcd.state == SW_IDLE){
+                        lcd.state = SW_RUN;
                         lcd.offset_timestamp = k_uptime_get_32();
-                    }else if (current_state == SW_RUN)
-                    {
-                        
-                        if(!two_sec){lcd.set_lap_time(k_uptime_get_32());}
-                    }else if (current_state == SW_RESET)
-                    {
-                        current_state = SW_RUN;
+                    }else if (lcd.state == SW_RUN){
+                        lcd.state = SW_RUN_W_LAP;
+                    }else if(lcd.state == SW_RESET){
                         lcd.offset_timestamp = k_uptime_get_32();
-                        lcd.total_pause_time = lcd.last_lap_timestamp = lcd.total_pause_time_since_last_lap = 0;
+                        lcd.total_pause_time = lcd.total_pause_time_since_last_lap = lcd.last_lap_timestamp = 0;
                         lcd.remove_lap_time();
                         lcd.first_lap = true;
+                        lcd.pause_occurred = false;
+                        lcd.state = SW_RUN;
                     }
-                }
-            }
-        }
+                }else if (timer_status == 1){ //Button pushed between 2 and 4 seconds
 
-        if(pressed_state){
-            uptime = k_uptime_get_32() - pressed_time;
-            if(uptime/1000 >= 4){
-                four_sec = true;
-                if(current_state == SW_RUN || current_state == SW_PAUSE ){
-                    current_state = SW_RESET;
-                }
-            }else if (uptime/1000 >= 2)
-            {
-                if(!two_sec){ //should only happen once per button press
-                    two_sec = true;
-                    if(current_state == SW_RUN){
+                    if(lcd.state == SW_RUN){
                         lcd.pause_timestamp = lcd.curr_time;
-                        current_state = SW_PAUSE;
-                    }else if (current_state == SW_PAUSE){ //Resume stopwatch
-
+                        lcd.state = SW_PAUSE;
+                    }else if (lcd.state == SW_PAUSE){
                         lcd.pause_interval = (k_uptime_get() - lcd.pause_timestamp);
                         lcd.total_pause_time += lcd.pause_interval;
-                        current_state = SW_RUN;
+
                         if(lcd.pause_occurred){ //If another pause has occurred without new lap time generated
                             lcd.total_pause_time_since_last_lap += lcd.pause_interval;
                         }else{
@@ -223,32 +256,22 @@ void lcd_run(void* p_msgq_time, void* p_msgq_pressed_state, void* unused){
                         }
                         
                         lcd.pause_occurred = true; 
+                        lcd.state = SW_RUN;
+                    }
+                    
+                }else if(timer_status  >= 2){ //Button pushed for at least 4 seconds
+                    if(lcd.state == SW_RUN){
+                        lcd.state = SW_RESET;
                     }
                 }
+                k_timer_stop(&button_pressed_timer);
             }
         }
 
-        if(current_state == SW_IDLE){
-            lcd.writeln(idle_str, sizeof(idle_str)-1, 0);
-            
-        }else if (current_state == SW_RUN){
-            lcd.curr_time = k_uptime_get_32();
-            lcd.print_running_time();
-
-            first_pause = true;
-        }else if (current_state == SW_PAUSE)
-        {
-            
-            lcd.display_paused_time();
-        }else if (current_state == SW_RESET)
-        {
-            lcd.writeln(reset_str,sizeof(reset_str)-1, 0);
-            lcd.writeln(reset_instr,sizeof(reset_instr)-1, 1); 
-            lcd.pause_interval = 0;
+        if(k_timer_status_get(&lcd_update_timer) > 0){ //Check if time to update lcd
+            lcd.run_state();
+            k_timer_start(&lcd_update_timer, K_MSEC(LCD_UPDATE_PERIOD), K_FOREVER);
         }
         
-        
-        k_msleep(50);
     }
 }
-

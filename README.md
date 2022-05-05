@@ -5,12 +5,12 @@
 
 ![sequence diagram](a4_zephyr_stopwatch.drawio.png)
 
-An ISR was attached to sw0. The callback is called on both edges of the button press. When the button is pressed down, the callback gets the current uptime (timestamp for buttonpress) and puts is into the two message queues. The state (`pressed = true`) is also put into another queue. When sw0 is released again the state (`pressed = false`) is again put into the queue such that each tread can make a decision on what to next given its instructions.
+An ISR was attached to sw0. The callback is called on both edges of the button press. When the button is pressed down, the callback puts the button-state (`pressed = true`) in the queues. queue. When sw0 is released again the state (`pressed = false`) is again put into the queues such that each tread can make a decision on what to next given its instructions.
 
 There are two main threads in this program:
 
-- **StopWatchLCD-thread**: Keeps track of the time and makes sure the correct information is displayed at the correct time.
-- **Peripheral-thread**: Keeps track of which state we're in and turns the leds on/off given the instructions.
+- **StopWatchLCD-thread**: Keeps track of the time using timers and makes sure the correct information is displayed at the correct time.
+- **Peripheral-thread**: Keeps track of how long the button is/was pushed down and turns LED0 and LED1 on/off according to the instructions.
 
 
 ## The problem to be solved

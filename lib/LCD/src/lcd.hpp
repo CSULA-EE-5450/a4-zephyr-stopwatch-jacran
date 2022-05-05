@@ -35,6 +35,7 @@ class StopWatchLCD{
         void display_paused_time(void);
         void remove_lap_time(void);
         void set_lap_time(uint32_t timestamp);
+        void run_state(void);
 
         uint32_t curr_time, offset_timestamp, pause_timestamp;
         uint32_t last_lap_timestamp = 0;
@@ -44,11 +45,15 @@ class StopWatchLCD{
         uint32_t total_pause_time_since_last_lap = 0;
         bool first_lap = true;
         bool pause_occurred = false;
+        uint8_t state;
 
 
 
     private:
         char lcd_column0_str[16],lcd_column1_str[16];
+        char idle_str[16] = "Stopwatch ready";
+        char reset_str[9] = "00:00:00";
+        char reset_instr[17] = "Press to restart";
 
 
         /**
@@ -70,7 +75,7 @@ class StopWatchLCD{
 };
 
 /*The run function for the lcd which is used by one thread. It could not be a member of a class. */
-void lcd_run(void* p_msgq_time, void* p_msgq_pressed_state, void* three);
+void lcd_run(void* p_msgq_pressed_state, void* unused, void* un_used);
 
 
 #endif /*LCD_H*/

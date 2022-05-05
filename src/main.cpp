@@ -6,21 +6,16 @@
 
 StopWatchPeripherals peripherals;
 
-
-/*Message queue for the timestampes for pressed button*/
-K_MSGQ_DEFINE(sw0_pressed_t_msgq_lcd, sizeof(uint32_t), 1, 0);
-K_MSGQ_DEFINE(sw0_pressed_t_msgq_led, sizeof(uint32_t), 1, 0);
-
 /* Message queue for the sw0 pressed state for pressed button
 *  true     = button is pressed down
 *  false    = button is released
 */
-K_MSGQ_DEFINE(sw0_pressed_bool_lcd, sizeof(bool), 1, 0);
-K_MSGQ_DEFINE(sw0_pressed_bool_led, sizeof(bool), 1, 0);
+K_MSGQ_DEFINE(sw0_pressed_bool_lcd, sizeof(bool), 2, 0);
+K_MSGQ_DEFINE(sw0_pressed_bool_led, sizeof(bool), 2, 0);
 
 /*Defines for initializing threads*/
-K_THREAD_STACK_DEFINE(t0_stack_area, 4096);
-K_THREAD_STACK_DEFINE(t1_stack_area, 4096);
+K_THREAD_STACK_DEFINE(t0_stack_area, 2048);
+K_THREAD_STACK_DEFINE(t1_stack_area, 2048);
 
 struct k_thread t0_data;
 struct k_thread t1_data;
@@ -51,10 +46,6 @@ void handle_button_pressed_down(const struct device* port, struct gpio_callback*
     else{
         
         pressed = true;
-        pressed_time = k_uptime_get_32();
-        k_msgq_put(&sw0_pressed_t_msgq_lcd, &pressed_time, K_NO_WAIT);
-        k_msgq_put(&sw0_pressed_t_msgq_led, &pressed_time, K_NO_WAIT);
-    
         k_msgq_put(&sw0_pressed_bool_lcd, &pressed, K_NO_WAIT);
         k_msgq_put(&sw0_pressed_bool_led, &pressed, K_NO_WAIT);
 
@@ -73,18 +64,18 @@ void main(void)
     
     
     
-    k_tid_t t0_tid = k_thread_create(&t0_data, t0_stack_area,
-                                     K_THREAD_STACK_SIZEOF(t0_stack_area),
-                                     lcd_run,
-                                    (void*)&sw0_pressed_t_msgq_lcd, (void*)&sw0_pressed_bool_lcd, NULL,
-                                     2, 0, K_MSEC(1000));
-
-    k_tid_t t1_tid = k_thread_create(&t1_data, t1_stack_area,
-                                     K_THREAD_STACK_SIZEOF(t1_stack_area),
-                                     run_leds,
-                                     (void*)&peripherals, (void*)&sw0_pressed_t_msgq_led, (void*)&sw0_pressed_bool_led,
-                                     2, 0, K_MSEC(1000));
-                        
+    k_tid_t t0_tid = k_thread_create(   &t0_data, t0_stack_area,
+                                        K_THREAD_STACK_SIZEOF(t0_stack_area),
+                                        lcd_run,
+                                        (void*)&sw0_pressed_bool_lcd, NULL, NULL,   
+                                        2, 0, K_MSEC(1000));
+    
+   k_tid_t t1_tid = k_thread_create(   &t1_data, t1_stack_area,
+                                        K_THREAD_STACK_SIZEOF(t1_stack_area),
+                                        run_leds,
+                                        (void*)&peripherals, (void*)&sw0_pressed_bool_led, NULL,
+                                        2, 0, K_MSEC(1000));
+                       
 
 
     while(true){

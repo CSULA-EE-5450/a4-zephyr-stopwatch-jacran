@@ -106,7 +106,7 @@ hd44780_init()
             printk("HD44780: Failed to configure pin %u: %d\n", i, res);
         }
     }
-
+    
     // display starts in 8 bit mode, so first command must pulse enable only once
     // _nibble will do this using only high nibble, though only bus width can be set
     hd44780_nibble(HD44780_CMD_CONFIG | HD44780_CONFIG_DATA4 );
