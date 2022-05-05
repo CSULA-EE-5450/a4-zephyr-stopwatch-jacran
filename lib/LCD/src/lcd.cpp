@@ -9,6 +9,7 @@
  */
 
 #include "lcd.hpp"
+#include <cstring>
 
 
 /**
@@ -44,6 +45,21 @@ void StopWatchLCD::write(char* input_str, size_t input_str_len) {
     }
 }
 
+
+
+void StopWatchLCD::print_scroll(uint8_t* start_index, char* input_str, uint8_t length, uint8_t column){
+    char sub_arr[16];
+    if(*start_index >= length){
+        *start_index = 0;
+    }
+
+    if(length <= 16){
+        this->writeln(input_str, length, column);
+    }else{
+        memcpy(sub_arr, input_str + *start_index /* Offset */, 16 /* Length */);
+        this->writeln(sub_arr, 16, column);
+    }
+}
 
 
 
@@ -130,6 +146,7 @@ void StopWatchLCD::set_lap_time(uint32_t timestamp){
  * 
  */
 void StopWatchLCD::run_state(void){
+    char text[28] = "Welcome to the secret state";
     switch (this->state)
     {
     case SW_IDLE:
@@ -152,6 +169,10 @@ void StopWatchLCD::run_state(void){
         this->writeln(reset_str,sizeof(reset_str)-1, 0);
         this->writeln(reset_instr,sizeof(reset_instr)-1, 1); 
         this->pause_interval = 0;
+        break;
+    case SW_EASTEREGG:
+        this->print_scroll(&scroll, text, sizeof(text)-1,0);
+        scroll++;
         break;
     default:
         this->state = SW_RESET;
@@ -259,9 +280,15 @@ void lcd_run(void* p_msgq_pressed_state, void* unused, void* un_used){
                         lcd.state = SW_RUN;
                     }
                     
-                }else if(timer_status  >= 2){ //Button pushed for at least 4 seconds
+                }else if(timer_status  == 2){ //Button pushed for at least 4 seconds
                     if(lcd.state == SW_RUN){
                         lcd.state = SW_RESET;
+                    }
+                }else if(timer_status >= 3){
+                    if(lcd.state != SW_EASTEREGG){
+                    lcd.state = SW_EASTEREGG;
+                    }else{
+                        lcd.state = SW_EASTEREGG;
                     }
                 }
                 k_timer_stop(&button_pressed_timer);

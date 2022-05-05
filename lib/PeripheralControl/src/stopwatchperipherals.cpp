@@ -96,8 +96,13 @@ void run_leds(void* p_peripherals, void* p_msgq_pressed_state, void* unused){
 
     uint32_t timer_status;
 
+    bool easteregg = false;
+
     struct k_timer button_pressed_p_timer;
     struct k_timer button_check_timer;
+    struct k_timer easteregg_timer;
+
+    k_timer_init(&easteregg_timer, NULL,NULL);
 
     k_timer_init(&button_pressed_p_timer,NULL, NULL);
     k_timer_init(&button_check_timer,NULL, NULL);
@@ -145,9 +150,25 @@ void run_leds(void* p_peripherals, void* p_msgq_pressed_state, void* unused){
                     peripherals->turn_on_led0();
                 }else if (num_times_expired == 2){
                     peripherals->turn_on_led1();
+                }else{
+                    if(easteregg){
+                        easteregg = false;
+                        peripherals->state = P_IDLE;
+                    }else{
+                        easteregg = true;
+                        k_timer_start(&easteregg_timer, K_MSEC(200), K_FOREVER);
+                    }
                 }
             }
             k_timer_start(&button_check_timer, K_MSEC(1), K_FOREVER);
+            
+        }
+
+        if(easteregg){
+            if(k_timer_status_get(&easteregg_timer) > 0){
+                peripherals->toggle_both_leds();
+                k_timer_start(&easteregg_timer, K_MSEC(200), K_FOREVER);
+            }
         }
         k_msleep(1); //had to add some sleep ?
     }

@@ -15,6 +15,7 @@ enum states_sw{
     SW_RUN_W_LAP, 
     SW_PAUSE,
     SW_RESET,
+    SW_EASTEREGG
 };
 
 
@@ -36,6 +37,7 @@ class StopWatchLCD{
         void remove_lap_time(void);
         void set_lap_time(uint32_t timestamp);
         void run_state(void);
+        void print_scroll(uint8_t* start_index, char* input_str, uint8_t length, uint8_t column);
 
         uint32_t curr_time, offset_timestamp, pause_timestamp;
         uint32_t last_lap_timestamp = 0;
@@ -46,6 +48,7 @@ class StopWatchLCD{
         bool first_lap = true;
         bool pause_occurred = false;
         uint8_t state;
+        uint8_t scroll = 0;
 
 
 

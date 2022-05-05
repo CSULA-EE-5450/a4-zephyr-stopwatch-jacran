@@ -20,7 +20,7 @@ enum states_p{
     P_IDLE = 0,
     P_RUN,
     P_PAUSE,
-    P_RESET
+    P_RESET, 
 };
 
 /**
@@ -37,6 +37,10 @@ class StopWatchPeripherals{
         void turn_off_led0(void) {gpio_pin_set_dt(&spec_pin_led0, 0);}
         void turn_on_led1(void) {gpio_pin_set_dt(&spec_pin_led1, 1);}
         void turn_off_led1(void) {gpio_pin_set_dt(&spec_pin_led1, 0);}
+        void toggle_both_leds(void){
+            gpio_pin_toggle_dt(&spec_pin_led0);
+            gpio_pin_toggle_dt(&spec_pin_led1);
+        }
         void init(gpio_callback_handler_t callback);
         void run_state(void);
         struct gpio_callback sw0_callback;
