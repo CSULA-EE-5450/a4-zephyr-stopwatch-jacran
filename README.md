@@ -5,7 +5,7 @@
 
 ![sequence diagram](a4_zephyr_stopwatch.drawio.png)
 
-An ISR was attached to sw0. The callback is called on both edges of the button press. When the button is pressed down, the callback puts the button-state (`pressed = true`) in the queues. queue. When sw0 is released again the state (`pressed = false`) is again put into the queues such that each tread can make a decision on what to next given its instructions.
+An ISR was attached to sw0. The callback is called on both edges of the button press. When the button is pressed down, the callback puts the button-state (`pressed = true`) in the queues. When sw0 is released, the state (`pressed = false`) is again put into the queues such that each tread can make a decision on what to next given its instructions.
 
 There are two main threads in this program:
 
